@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma'lumotlar Boshqaruvi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('/img.png');
+            background-size: cover;
+            background-attachment: fixed;
+            margin: 0;
+            padding: 0;
+            color: #fff;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .user-data-item {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+        }
+        .user-data-item h3, .user-data-item p {
+            color: #ddd;
+        }
+        .delete-btn {
+            background-color: #ff4d4d;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: #e63939;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #333;
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        .modal input, .modal textarea {
+            width: 90%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ma'lumotlar Boshqaruvi</h1>
+        <button class="button" id="open-modal">Ma'lumot Qo'shish</button>
+        <div id="user-data-list"></div>
+    </div>
+
+    <div class="modal" id="add-modal">
+        <h2>Yangi Ma'lumot Qo'shish</h2>
+        <input type="text" id="data-title" placeholder="Sarlavha kiriting">
+        <textarea id="data-content" placeholder="Mazmun kiriting"></textarea>
+        <div class="modal-buttons">
+            <button class="button" id="save-data">Saqlash</button>
+            <button class="button" id="close-modal">Bekor Qilish</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase konfiguratsiyasi
+        const firebaseConfig = {
+            apiKey: "AIzaSyBtiYxUg6emoKYQ7604D2VJTwy5MbLkDgU",
+            authDomain: "kinotreller.firebaseapp.com",
+            projectId: "kinotreller",
+            storageBucket: "kinotreller.appspot.com",
+            messagingSenderId: "980642143298",
+            appId: "1:980642143298:web:6aea61a4645bb6ee1be1db",
+            measurementId: "G-DQFL4DBDY0"
+        };
+
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js';
+        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js';
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const modal = document.getElementById("add-modal");
+        const openModalBtn = document.getElementById("open-modal");
+        const closeModalBtn = document.getElementById("close-modal");
+        const saveDataBtn = document.getElementById("save-data");
+
+        const titleInput = document.getElementById("data-title");
+        const contentInput = document.getElementById("data-content");
+        const userDataList = document.getElementById("user-data-list");
+
+        openModalBtn.addEventListener("click", () => {
+            modal.style.display = "block";
+        });
+
+        closeModalBtn.addEventListener("click", () => {
+            modal.style.display = "none";
+        });
+
+        saveDataBtn.addEventListener("click", async () => {
+            const title = titleInput.value.trim();
+            const content = contentInput.value.trim();
+
+            if (!title || !content) {
+                alert("Iltimos, barcha maydonlarni to'ldiring.");
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "user_data"), { title, content });
+                alert("Ma'lumot muvaffaqiyatli qo'shildi!");
+                titleInput.value = "";
+                contentInput.value = "";
+                modal.style.display = "none";
+                loadUserData();
+            } catch (error) {
+                console.error("Ma'lumotni qo'shishda xato:", error);
+            }
+        });
+
+        async function loadUserData() {
+            userDataList.innerHTML = "Bazadan yuklanmoqda...";
+            try {
+                const querySnapshot = await getDocs(collection(db, "user_data"));
+                userDataList.innerHTML = "";
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const item = document.createElement("div");
+                    item.classList.add("user-data-item");
+                    item.innerHTML = `
+                        <h3>${data.title}</h3>
+                        <p>${data.content}</p>
+                        <button class="delete-btn" onclick="deleteData('${doc.id}')">O'chirish</button>
+                    `;
+                    userDataList.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Ma'lumotlarni yuklashda xato:", error);
+            }
+        }
+
+        window.deleteData = async (id) => {
+            try {
+                await deleteDoc(doc(db, "user_data", id));
+                alert("Ma'lumot muvaffaqiyatli o'chirildi!");
+                loadUserData();
+            } catch (error) {
+                console.error("Ma'lumotni o'chirishda xato:", error);
+            }
+        };
+
+        // Ma'lumotlarni dastlab yuklash
+        loadUserData();
+    </script>
+</body>
+</html>
